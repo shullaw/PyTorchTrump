@@ -31,7 +31,7 @@ import torch.utils.data
 import time
 from sklearn import metrics
 from keras.preprocessing.sequence import pad_sequences
-
+import cProfile
 tqdm.pandas()
 from time import process_time_ns
 import PreprocessingP as PP
@@ -46,6 +46,7 @@ import re
 import numpy as np
 import torch
 import torchtext
+from To_Trump_Processing import full_text_to_csv
 
 
 def set_seed(seed: int = 0):
@@ -78,42 +79,49 @@ def camel_case(clean_text):
     clean_text = clean_text.apply(lambda x: re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', x))
     return clean_text
 
-def complete_clean(df):
+def complete_clean(text):
 
-    prep.set_options(prep.OPT.URL, prep.OPT.EMOJI, prep.OPT.ESCAPE_CHAR,
-                     prep.OPT.RESERVED, prep.OPT.SMILEY)
-    tweet_no_hashtag = pandas.Series(text).str.replace(r'(#[a-zA-Z0-9_*]\w+)', '', regex=True) #hashtag removed
-    clean_text = tweet_no_hashtag.apply(lambda t: prep.clean(t)) #remove options ^^
-    clean_text = clean_text.str.translate(str.maketrans(string.punctuation, ' ' * len(string.punctuation))) #replace punctuation with space
-    clean_text = clean_text.replace(r'^\s*$', np.nan, regex=True).explode().dropna() #empty cells? drop!
-    clean_text = clean_text.replace(r'\s+', ' ', regex=True) #extra white space
-    clean_text = clean_text.replace(r'(?!<a(.*)>(.*))(&amp;|&)(?=(.*)<\/a>)', 'and', regex=True) # ampersand
-    clean_text = camel_case(clean_text)
-    return clean_text
+    prep.set_options(prep.OPT.URL, prep.OPT.EMOJI, prep.OPT.ESCAPE_CHAR, prep.OPT.SMILEY)
+    hashtags_mentions = text.apply(lambda t: re.findall(r'(#[a-zA-Z0-9_*]\w+)', t)).explode().dropna()  # find hashtags  # keeping track of index for reinsertion to tweet
+    hashtags_mentions = text.apply(lambda t: re.findall(r'@[a-zA-Z0-9_*]\w+', t)).explode().dropna()  # find @mentions
+    hashtags_mentions = hashtags_mentions.str.translate(str.maketrans('#@', '  '))  # reserved words (#@) removed
+    text = pandas.Series(text).str.replace(r'(#[a-zA-Z0-9_*]\w+)', '', regex=True)  # hashtag removed
+    text = pandas.Series(text).str.replace(r'(@[a-zA-Z0-9_*]\w+)', '', regex=True)  # mention removed
+    text = text.apply(lambda t: prep.clean(t))  # remove options ^^
+    text = text.str.translate(str.maketrans(string.punctuation, ' ' * len(string.punctuation)))  # replace punctuation with space
+    text = text.replace(r'^\s*$', np.nan, regex=True).explode().dropna()  # empty cells? drop!
+    text = text.replace(r'\s+', ' ', regex=True)  # extra white space
+    text = text.replace(r'(?!<a(.*)>(.*))(&amp;|&)(?=(.*)<\/a>)', 'and', regex=True)  # ampersand
+    clean_text = text
+    return clean_text, hashtags_mentions
 
 
 if __name__ == '__main__':
     tqdm.pandas()
     start = process_time_ns()
-    set_seed(42)
+    # set_seed(42)
+
+    # trump_file = r'X:\Senior_Project\Datasets\Trumps Legcy.csv'
+    # df = pandas.read_csv(trump_file)  # read in trump tweet data
+    # df['comment_text'] = df['comment_text'].astype('string')  # trump tweet text
+    # df['date'] = pandas.to_datetime(df['date'], infer_datetime_format=True)  # dates for sorting
+    # df = df.sort_values(by='date', ascending=True).reset_index().drop(columns='index')  # sort by date
+    # del df['date']  # delete for memory
+    # text = pandas.Series(df.comment_text, name='comment_text')  # tweet text
+    # del df  # delete for memory
+    # cleaned_text, hashtags_mentions = complete_clean(text)
+    # del text  # delete for memory
+    # torched_text = cleaned_text.apply(torchtext.data.utils._basic_english_normalize)
+    #
+    # read_path = r"X:\Senior_Project\Datasets\Tweets_to_Trump\All_Tweets_To_Trump"
+    # write_path = r"X:\Senior_Project\Datasets\Tweets_to_Trump\Cleaned_Tweets"
+    # full_text_to_csv(read_path, write_path)
 
 
-    df = pandas.read_csv(r'X:\Senior_Project\Datasets\Trumps Legcy.csv')
-    df['comment_text'] = df['comment_text'].astype('string')
-    df['date'] = pandas.to_datetime(df['date'], infer_datetime_format=True)
-    df = df.sort_values(by='date', ascending=True).reset_index().drop(columns='index')
-    text = pandas.Series(df.comment_text, name='comment_text')  # tweet text
-    # list to store duplicate hashtags with multiple per line
-    # hashtags in order of dataframe with multiple per line
-    hashtags_multiD = text.apply(lambda t: re.findall(r'(#[a-zA-Z0-9_*]\w+)', t))  # find hashtags
-    # keeping track of index for reinsertion to tweet
-    hashtags_multiD = pandas.Series(hashtags_multiD, index=text.index).explode().dropna()  # (multitweet per line).split
-    # tweet text with hashtag removed
-    cleaned_text = complete_clean(text)
-
-    torched_text = cleaned_text.apply(torchtext.data.utils._basic_english_normalize)
 
 
+
+    print(start - process_time_ns())
 
     # tweet_no_hashtag = pandas.Series(text).str.replace(r'(#[a-zA-Z0-9_*]\w+)', '', regex=True)
     # clean_text = tweet_no_hashtag.apply(PP.preprocess)
@@ -130,6 +138,3 @@ if __name__ == '__main__':
     #     df = pandas.read_csv(r'X:\Senior_Project\Datasets\Trumps Legcy.txt')
     #     # after processing some of the texts are empty
     #     df['comment_text'] = df['comment_text'].fillna('')
-    print(start - process_time_ns())
-
-
