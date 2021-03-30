@@ -1,4 +1,4 @@
-import preprocessor
+import multiprocessing as mp
 
 #Andrew Lukyanenko - Kaggle - Preprocessing and other things
 import numpy as np
@@ -686,3 +686,45 @@ class CyclicLR(object):
                 lr = base_lr + base_height * self.scale_fn(self.last_batch_iteration)
             lrs.append(lr)
         return lrs
+
+#--------------------------------------------------------------------------------
+#multiprocessing
+def full_text_df(file_path):
+    full_text = []
+    with open(file_path, 'r', encoding='utf8') as fh:
+        for line in tqdm.tqdm(fh):
+            idx1 = line.find(r'"full_text":"@realDonaldTrump') + len(r'"full_text":"@realDonaldTrump')-1
+            idx2 = line.find(r',"truncated')
+            full_text.append(line[idx1:idx2])
+
+
+def json_to_pandas(file):
+    id = []
+    full_text = []
+    with open(file, 'r', encoding='utf8') as fh:
+        for line in fh:
+            tweet = json.loads(line)['id']
+            id.append(tweet)
+            tweet = json.loads(line)['full_text']
+            full_text.append(tweet)
+    df = pd.DataFrame({'id': id, 'full_text': full_text})
+
+
+def clean_files(full_path):
+    id = []
+    full_text = []
+    with open(full_path, 'r', encoding='utf8') as fh:
+        for line in fh:
+            tweet = json.loads(line)['id']
+            id.append(tweet)
+            tweet = json.loads(line)['full_text']
+            full_text.append(tweet)
+    df = pd.DataFrame({'id': id, 'full_text': full_text})
+    df.to_csv(full_path.strip('.txt') + '_clean.txt')
+
+
+def mp_text(function, file_path):
+    files = [f for f in os.listdir(file_path) if f.endswith(".txt")]
+    pool = Pool(mp.cpu_count())
+    results = pool.map(function, files)
+    pool.close()
