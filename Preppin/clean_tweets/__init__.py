@@ -10,7 +10,8 @@ import os
 import swifter
 import sys
 
-# taken from kaggle, need to cite, I've noted the methods that were added, this was used mainly
+# #Andrew Lukyanenko - Kaggle - Preprocessing and other things
+# I've noted the methods that were added, this was used mainly
 # for fixing contractions (you're == you are)
 def fixing_with_regex(text) -> str:
     """
