@@ -1,4 +1,4 @@
-#import pandas
+import pandas
 import json
 from tqdm import tqdm
 import multiprocessing as mp
@@ -14,27 +14,9 @@ import mmap
 
 
 
-def full_text_df(file_path):
-    full_text = []
-    with open(file_path, 'r', encoding='utf8') as fh:
-        for line in tqdm(fh):
-            idx1 = line.find(r'"full_text":"@realDonaldTrump') + len(r'"full_text":"@realDonaldTrump')-1
-            idx2 = line.find(r',"truncated')
-            full_text.append(line[idx1:idx2])
 
 
-# def json_to_pandas(file):
-#     id = []
-#     full_text = []
-#     with open(file, 'r', encoding='utf8') as fh:
-#         for line in fh:
-#             tweet = json.loads(line)['id']
-#             id.append(tweet)
-#             tweet = json.loads(line)['full_text']
-#             full_text.append(tweet)
-#     df = pandas.DataFrame({'id': id, 'full_text': full_text})
-
-
+#tried reading files with jsonloads, did not like my files
 # def clean_files(full_path):
 #     id = []
 #     full_text = []
@@ -47,7 +29,17 @@ def full_text_df(file_path):
 #     df = pandas.DataFrame({'id': id, 'full_text': full_text})
 #     df.to_csv(full_path.strip('.txt') + '_clean.txt')
 
+# original parsing method, no longer used
+def full_text_df(file_path):
+    full_text = []
+    with open(file_path, 'r', encoding='utf8') as fh:
+        for line in tqdm(fh):
+            idx1 = line.find(r'"full_text":"@realDonaldTrump') + len(r'"full_text":"@realDonaldTrump')-1
+            idx2 = line.find(r',"truncated')
+            full_text.append(line[idx1:idx2])
+            
 
+# Attempt to read file by chunks.  This was before splitting files from 200GB+ down to 70-100MB inside of Preppin
 def read_in_chunks(file_object, chunk_size=int(1000)):
     """Lazy function (generator) to read a file piece by piece.
     Default chunk size: 10000."""
@@ -57,7 +49,7 @@ def read_in_chunks(file_object, chunk_size=int(1000)):
             break
         yield data
         
-
+# Originally used when parsing text manually rather than with tweet-parser module
 def full_text_to_csv(read_path, write_path):
     files = [f for f in os.listdir(read_path) if f.endswith(".txt")]
     full_text = []
@@ -72,31 +64,6 @@ def full_text_to_csv(read_path, write_path):
                     wp.write(item + '\n')
             full_text = []
 
-
-def display_top(snapshot, key_type='lineno', limit=3):
-    snapshot = snapshot.filter_traces((
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
-        tracemalloc.Filter(False, "<unknown>"),
-    ))
-    top_stats = snapshot.statistics(key_type)
-
-    print("Top %s lines" % limit)
-    for index, stat in enumerate(top_stats[:limit], 1):
-        frame = stat.traceback[0]
-        # replace "/path/to/module/file.py" with "module/file.py"
-        filename = os.sep.join(frame.filename.split(os.sep)[-2:])
-        print("#%s: %s:%s: %.1f KiB"
-              % (index, filename, frame.lineno, stat.size / 1024))
-        line = linecache.getline(frame.filename, frame.lineno).strip()
-        if line:
-            print('    %s' % line)
-
-    other = top_stats[limit:]
-    if other:
-        size = sum(stat.size for stat in other)
-        print("%s other: %.1f KiB" % (len(other), size / 1024))
-    total = sum(stat.size for stat in top_stats)
-    print("Total allocated size: %.1f KiB" % (total / 1024))
 
 
 
