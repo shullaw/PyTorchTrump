@@ -140,7 +140,7 @@ if __name__ == "__main__":
       files = [f for f in os.listdir(r'/home/j/anaconda3/envs/PyTorch/PyTorchTrump/Preppin/get_tweets') if f.startswith('tweets')]
       start_total = process_time_ns()
       print('Start all files: ', start_total/int(1e9), 'seconds\n')
-      for f in files[100:]:
+      for f in files:
           start = process_time_ns()/int(1e9)
           print('Start: ', start, 'file: ' + f)
           read_to_clean(path+f)
