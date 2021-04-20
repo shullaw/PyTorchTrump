@@ -12,6 +12,8 @@ import sys
 
 #should fix this with the wikipedia for english contractions
 # taken from kaggle, need to cite, I've noted the methods that were added, this was used mainly
+# #Andrew Lukyanenko - Kaggle - Preprocessing and other things
+# I've noted the methods that were added, this was used mainly
 # for fixing contractions (you're == you are)
 def fixing_with_regex(text) -> str:
     """
@@ -98,7 +100,7 @@ def read_to_clean(trump_file):
                 temp.to_csv(new_path.strip('.txt') + '_CLEAN.txt', index=False)
             
 
-# swifter used for multiprocessing...
+# swifter used for multiprocessing... hear that fan?
 def complete_clean(text):
     try:
         prep.set_options(prep.OPT.EMOJI, prep.OPT.SMILEY, prep.OPT.ESCAPE_CHAR)
@@ -116,8 +118,8 @@ def complete_clean(text):
         punct = str.maketrans(punct, ' '*len(punct)) #map punctuation to space
         text = text.swifter.allow_dask_on_strings().apply(lambda t: t.translate(punct))  # replace punctuation with None
         text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r"\.+|\?+|!+", '<EOS>', t))  # replace end of sentence punctuation with EOS  
-        #text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r"\d{4}",'<year>', t))  # replace 4 digits in a row with <year>  !--> scrapped        
-        #text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r"\d",'<number>', t))  # replace digits with <number> !-->ended up scrapping this and removing numbers all together 
+        #text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r"\d{4}",'<year>', t))  # replace 4 digits in a row with <year>  !--> scrapped
+        #text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r"\d",'<number>', t))  # replace digits with <number> !-->ended up scrapping this and removing numbers all together
         text = text.swifter.allow_dask_on_strings().apply(lambda t: t.replace(r'\s+', '')) # extra white space
      
         text = text.swifter.allow_dask_on_strings().apply(lambda t: prep.clean(t))  # remove options ^^
@@ -140,8 +142,8 @@ if __name__ == "__main__":
       # read in files from directory one by one, they are processed and new files created in directory /clean_tweets
       path = r'/home/j/anaconda3/envs/PyTorch/PyTorchTrump/Preppin/get_tweets/'
       files = [f for f in os.listdir(r'/home/j/anaconda3/envs/PyTorch/PyTorchTrump/Preppin/get_tweets') if f.startswith('tweets')]
-      start_total = process_time_ns()/int(1e9)
-      print('Start all files: ', start_total, 'seconds\n')
+      start_total = process_time_ns()
+      print('Start all files: ', start_total/int(1e9), 'seconds\n')
       for f in files:
           start = process_time_ns()/int(1e9)
           print('Start: ', start, 'file: ' + f)
