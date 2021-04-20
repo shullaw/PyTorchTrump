@@ -63,6 +63,7 @@ def fixing_with_regex(text) -> str:
     
     text = re.sub(r"(H|h)asn(\'|\’)t ", "has not ", text)  # added
     text = re.sub(r"(W|w)on(\'|\’)t ", "will not ", text)
+    text = re.sub(r"(W|w)ouldn(\'|\’)t ", "would not ", text)  # added
     text = re.sub(r"(C|c)an(\'|\’)t ", "can not ", text)
     text = re.sub(r"(Y|y)(\'|\’)all ", "you all ", text)
     text = re.sub(r"(Y|y)a(\'|\’)ll ", "you all ", text)

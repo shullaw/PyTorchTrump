@@ -38,19 +38,9 @@ if __name__ == '__main__':
     
     path = r"/media/j/BigMomma/Senior_Project/Datasets/Tweets_to_Trump/All_Tweets_To_Trump_Processed/"
     files = [path+f for f in os.listdir(path)]
-    
-    start=process_time_ns()
-
-    # os.path.walk(path , process_files_parallel, None)  # attempted working in parallel, always ran out of memory
-    # print("process_files_parallel()", start - process_time_ns())  # working in parallel also was actually slow in some instances
-            
-    
     start = process_time_ns()
-    
     # with multiprocessing.Pool(12) as p:  # I would like to test this again on smaller files (split files)
     #       p.map(get_tweets, files)     
     for f in files:
         get_tweets(f)
-    
     print((process_time_ns() - start))
-
