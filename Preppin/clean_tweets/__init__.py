@@ -10,9 +10,9 @@ import os
 import swifter
 import sys
 
-#should fix this with the wikipedia for english contractions
-# taken from kaggle, need to cite, I've noted the methods that were added, this was used mainly
-# #Andrew Lukyanenko - Kaggle - Preprocessing and other things
+# Should fix this with the wikipedia for english contractions
+# I've noted the methods that were added, this was used mainly
+## Andrew Lukyanenko - Kaggle - Preprocessing and other things
 # I've noted the methods that were added, this was used mainly
 # for fixing contractions (you're == you are)
 def fixing_with_regex(text) -> str:
@@ -77,35 +77,40 @@ def fixing_with_regex(text) -> str:
         '\g<1> \g<2>', text)
     return text
     
-# this method works best reading in files under 700MB only a system with 15.5GB RAM   
+# this method works best reading in files under 70MB only a system with 15.5GB RAM   
 def read_to_clean(trump_file):
     
-        df = pandas.read_csv(trump_file, names=['full_text'], lineterminator='\n', delimiter='\n', comment='\n',quoting=3,  iterator=True, error_bad_lines=False)  # read in file
-        for df in df:
+            df = pandas.read_csv(trump_file, names=['full_text'], lineterminator='\n', delimiter='\n', comment='\n',quoting=3, error_bad_lines=False)  # read in file
+            df.dropna()
             try:
                 temp = complete_clean(df['full_text'])  # some files do not have first row '0' for column name
                 new_path = trump_file[0:52] + 'clean_tweets/' + trump_file[63:].strip('.txt') + str(uuid.uuid1())  # send to new folder in same directory      
-                temp.to_csv(new_path.strip('.txt') + '_CLEAN.txt', index=False)
+                temp = pandas.DataFrame(temp)
+                temp.to_csv(new_path.strip('.txt') + 'FINAL_CLEAN.txt', index=False)
             except Exception as e:
                 print("sys.exc.info: ", sys.exc_info()[0])
                 print("Exception: ", e)
                 temp = complete_clean(df)  # catch no column header 
                 new_path = trump_file[0:52] + 'clean_tweets/' + trump_file[63:].strip('.txt') + str(uuid.uuid1())  # send to new folder in same directory
-                temp.to_csv(new_path.strip('.txt') + '_CLEAN.txt', index=False)      
+                temp = pandas.DataFrame(temp)
+                temp.to_csv(new_path.strip('.txt') + 'FINAL_CLEAN.txt', index=False)      
             except Exception as e:
                 print("sys.exc.info: ", sys.exc_info()[0])
                 print("Exception: ", e)
                 temp = complete_clean(df.read()['full_text'])  # last catch, just testing this out
+                temp = pandas.DataFrame(temp)
                 new_path = trump_file[0:52] + 'clean_tweets/' + trump_file[63:].strip('.txt') + str(uuid.uuid1())  # send to new folder in same directory      
-                temp.to_csv(new_path.strip('.txt') + '_CLEAN.txt', index=False)
+                temp.to_csv(new_path.strip('.txt') + 'FINAL_CLEAN.txt', index=False)
+            except Exception as e:
+                print("Passing: " , e)
+                pass # can't resolve issue
             
 
 # swifter used for multiprocessing... hear that fan?
 def complete_clean(text):
     try:
         prep.set_options(prep.OPT.EMOJI, prep.OPT.SMILEY, prep.OPT.ESCAPE_CHAR)
-        hashtag_count = [text.apply(lambda x: x.count("#")) < 5]  # dropping tweets with more than 5 hashtags
-        retweets = [~text.str.contains('RT')]  # going to drop retweets later
+        retweets = [text.str.contains('RT')]  # going to drop retweets later
         text = text.swifter.allow_dask_on_strings().apply(lambda t: fixing_with_regex(t))
         text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r'( #[a-zA-Z0-9_*]\w+)', '', t))  # hashtag removed
         text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r'(@[a-zA-Z0-9_*]\w+)', '', t))  # mention removed
@@ -113,20 +118,19 @@ def complete_clean(text):
         text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r'(?<!\w)([A-Z])\.', r'\1', t))  # attempt to remove periods from acronyms (C.I.A.)       
         text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r'RT', '', t)).str.lower()  # remove 'RT'
 
-        text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r'&amp;|&', 'and', t))  # ampersand
+        text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r'&amp;|&', ' and ', t))  # ampersand
         punct = '"$%&\'()*+,-/:;=[\\]^_`{|}~'  # originally left out *, had to fix
         punct = str.maketrans(punct, ' '*len(punct)) #map punctuation to space
         text = text.swifter.allow_dask_on_strings().apply(lambda t: t.translate(punct))  # replace punctuation with None
         text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r"\.+|\?+|!+", '<EOS>', t))  # replace end of sentence punctuation with EOS  
         #text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r"\d{4}",'<year>', t))  # replace 4 digits in a row with <year>  !--> scrapped
-        #text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r"\d",'<number>', t))  # replace digits with <number> !-->ended up scrapping this and removing numbers all together
+        #text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r"\d",'<number>', t))  # replace digits with <number> !-->ended up scrapping this and keeping numbers
         text = text.swifter.allow_dask_on_strings().apply(lambda t: t.replace(r'\s+', '')) # extra white space
      
         text = text.swifter.allow_dask_on_strings().apply(lambda t: prep.clean(t))  # remove options ^^
         text = text.swifter.allow_dask_on_strings().apply(lambda t: ' '.join(t.split()))  # remove extra white space
         text = text.swifter.allow_dask_on_strings().apply(lambda t: re.sub(r"(\b\s+<EOS>\b)|(\b<EOS>\s+\b)|(\b\s+<EOS>\s+\b)", r"<EOS>", t)) # remove whitespace before and after EOS
-        text = text[hashtag_count[0]]  # drop tweets with more than 5 hashtags... can't make a coherent sentence out of them.
-        text = text[retweets[0]]  # drop retweets
+        text = text[retweets[0] != True]  # drop retweets
         text = text.str.split('<EOS>').explode()  #split sentences into new rows
         text = text[text.values != '']  # drop empty cells
         text = text[text.values != ' '] # drop more empty cells
@@ -135,18 +139,20 @@ def complete_clean(text):
     except Exception as e:
         print("sys.exc.info: ", sys.exc_info()[0])
         print("Exception: ", e)
+        pass
 
         
 if __name__ == "__main__":
       
-      # read in files from directory one by one, they are processed and new files created in directory /clean_tweets
-      path = r'/home/j/anaconda3/envs/PyTorch/PyTorchTrump/Preppin/get_tweets/'
-      files = [f for f in os.listdir(r'/home/j/anaconda3/envs/PyTorch/PyTorchTrump/Preppin/get_tweets') if f.startswith('tweets')]
-      start_total = process_time_ns()
-      print('Start all files: ', start_total/int(1e9), 'seconds\n')
-      for f in files:
-          start = process_time_ns()/int(1e9)
-          print('Start: ', start, 'file: ' + f)
-          read_to_clean(path+f)
-          print((process_time_ns() - start))
-      print('Total time: ', (process_time_ns()/int(1e9) - start_total), 'seconds\n')
+       # read in files from directory one by one, they are processed and new files created in directory /clean_tweets
+       path = r'/home/j/anaconda3/envs/PyTorch/PyTorchTrump/Preppin/get_tweets/'
+       files = [f for f in os.listdir(r'/home/j/anaconda3/envs/PyTorch/PyTorchTrump/Preppin/get_tweets') if f.startswith('tweets')]
+       start_total = process_time_ns()
+       print('Start all files: ', start_total/int(1e9), 'seconds\n')
+       for f in files:
+           start = process_time_ns()/int(1e9)
+           print('Start: ', start, 'file: ' + f)
+           read_to_clean(path+f)
+           print((process_time_ns()/int(1e9) - start))
+       print('Total time: ', (process_time_ns()/int(1e9) - start_total), 'seconds\n')
+      
